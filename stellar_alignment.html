@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Stellar Alignment — วงโคจรที่บรรจบกัน</title>
+<style>
+  :root{
+    --void: #060911;
+    --deep-blue: #0b1330;
+    --starlight-gold: #d9b968;
+    --ivory: #ece7da;
+    --faint: rgba(236,231,218,0.55);
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background: var(--void);
+    color: var(--ivory);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow-x: hidden;
+    cursor: default;
+  }
+  @font-face{
+    font-family:'Cormorant Garamond';
+    src: local('Cormorant Garamond');
+  }
+
+  /* ---------- Preloader ---------- */
+  #preloader{
+    position:fixed; inset:0; background:var(--void);
+    z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition: opacity 1.1s ease, visibility 1.1s ease;
+  }
+  #preloader.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  #preload-num{
+    font-family: 'Jost', 'Inter', sans-serif;
+    font-size: 13px; letter-spacing: 0.35em; color: var(--starlight-gold);
+    font-weight: 300;
+  }
+  #preload-line{
+    width:120px; height:1px; background:rgba(217,185,104,0.2); margin-top:18px; position:relative; overflow:hidden;
+  }
+  #preload-fill{
+    position:absolute; left:0; top:0; height:100%; width:0%; background:var(--starlight-gold);
+  }
+
+  /* ---------- Canvas ---------- */
+  #stars-canvas{
+    position:fixed; inset:0; width:100vw; height:100vh; z-index:0; display:block;
+  }
+
+  /* ---------- Layout ---------- */
+  main{ position:relative; z-index:1; }
+  section{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 8vh 8vw; position:relative;
+  }
+  section::before{
+    content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(6,9,17,0.72) 0%, rgba(6,9,17,0.4) 45%, rgba(6,9,17,0) 75%);
+  }
+
+  .eyebrow{
+    font-family:'Jost','Inter',sans-serif; font-size:11px; letter-spacing:0.3em;
+    color: var(--faint); margin-bottom: 22px; font-weight:300;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
+  }
+  h1{
+    font-weight:500; font-style:italic; font-size: clamp(30px, 6vw, 64px);
+    line-height:1.25; color:var(--ivory); max-width: 14ch;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.95), 0 1px 6px rgba(0,0,0,0.9);
+  }
+  h1 .gold{ color: var(--starlight-gold); font-style:normal; }
+  p.lede{
+    font-family:'Jost','Inter',sans-serif; font-weight:300; font-size:14px;
+    letter-spacing:0.04em; color:var(--faint); max-width:34ch; margin-top:26px; line-height:1.8;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.85);
+  }
+
+  .scene-label{
+    font-family:'Jost','Inter',sans-serif; font-size:11px; letter-spacing:0.3em;
+    color: rgba(217,185,104,0.85); margin-bottom: 16px;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
+  }
+  .milestone h2{
+    font-weight:500; font-style:italic; font-size: clamp(24px, 4.6vw, 40px);
+    max-width: 16ch; line-height:1.4; color: var(--ivory);
+    text-shadow: 0 4px 22px rgba(0,0,0,0.95), 0 1px 6px rgba(0,0,0,0.9);
+  }
+  .milestone .date{
+    font-family:'Jost','Inter',sans-serif; font-size:12px; letter-spacing:0.08em;
+    color: var(--starlight-gold); margin-top:14px; font-weight:300;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
+  }
+  .milestone p{
+    font-family: 'Cormorant Garamond', serif; font-weight:400; font-size:17px;
+    color: var(--faint); max-width: 40ch; margin-top:22px; line-height:1.85;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.85);
+  }
+
+  .final h1{ max-width: 18ch; }
+  .final .signoff{
+    font-family:'Jost','Inter',sans-serif; font-size:12px; letter-spacing:0.25em;
+    color: var(--faint); margin-top:34px; font-weight:300;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.85);
+  }
+  .final::before{
+    background: radial-gradient(ellipse 65% 60% at 50% 50%, rgba(6,9,17,0.8) 0%, rgba(6,9,17,0.5) 45%, rgba(6,9,17,0) 78%);
+  }
+
+  .scroll-hint{
+    position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+    font-family:'Jost','Inter',sans-serif; font-size:10px; letter-spacing:0.3em; color:var(--faint);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .scroll-hint span{
+    width:1px; height:34px; background:linear-gradient(to bottom, rgba(217,185,104,0.8), transparent);
+    animation: hintmove 2.2s ease-in-out infinite;
+  }
+  @keyframes hintmove{ 0%,100%{ opacity:0.2; } 50%{ opacity:1; } }
+
+  .fade-el{ opacity:0; transform: translateY(18px); transition: opacity 1.4s ease, transform 1.4s ease; }
+  .fade-el.in{ opacity:1; transform:translateY(0); }
+
+  /* editable notice, remove when customizing */
+  .edit-note{
+    font-family:'Jost',sans-serif; font-size:10px; color:rgba(217,185,104,0.5);
+    letter-spacing:0.08em; margin-top:10px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .fade-el{ transition:none; opacity:1; transform:none; }
+    #preloader{ transition:none; }
+  }
+
+  #sound-toggle{
+    position:fixed; bottom:28px; right:28px; z-index:50;
+    width:38px; height:38px; border-radius:50%;
+    border:1px solid rgba(217,185,104,0.35); background:rgba(6,9,17,0.4);
+    backdrop-filter: blur(4px);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    opacity:0; transition: opacity 1s ease, border-color 0.3s ease;
+  }
+  #sound-toggle.visible{ opacity:1; }
+  #sound-toggle:hover{ border-color: rgba(217,185,104,0.8); }
+  #sound-toggle svg{ width:15px; height:15px; }
+  #sound-toggle .bar{ fill:none; stroke:var(--starlight-gold); stroke-width:1.4; }
+  html.gate-active, body.gate-active{ overflow:hidden; height:100vh; }
+
+  #entry-gate{
+    position:fixed; inset:0; z-index:900;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; text-align:center; padding:8vw;
+    opacity:0; transition: opacity 1.2s ease;
+  }
+  #entry-gate::before{
+    content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background: radial-gradient(ellipse 55% 45% at 50% 50%, rgba(6,9,17,0.78) 0%, rgba(6,9,17,0.45) 45%, rgba(6,9,17,0) 75%);
+  }
+  #entry-gate.visible{ opacity:1; }
+  #entry-gate.hidden{ opacity:0; pointer-events:none; transition: opacity 0.9s ease; }
+  #entry-dot{
+    width:6px; height:6px; border-radius:50%; background:var(--starlight-gold);
+    box-shadow: 0 0 12px 4px rgba(217,185,104,0.7), 0 0 40px 14px rgba(217,185,104,0.25);
+    margin-bottom:26px;
+    animation: dotpulse 2.6s ease-in-out infinite;
+  }
+  @keyframes dotpulse{
+    0%,100%{ transform:scale(1); opacity:0.75; }
+    50%{ transform:scale(1.6); opacity:1; }
+  }
+  #entry-gate .eyebrow{ margin-bottom:16px; }
+  #entry-gate h1{ font-size: clamp(22px, 4.6vw, 38px); max-width:16ch; }
+  #entry-gate .enter-hint{
+    margin-top:30px; font-family:'Jost','Inter',sans-serif; font-size:11px;
+    letter-spacing:0.3em; color: var(--starlight-gold); font-weight:300;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
+  }
+
+  #bigbang-flash{
+    position:fixed; inset:0; z-index:850; pointer-events:none; opacity:0;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(217,185,104,0.45) 22%, rgba(6,9,17,0) 62%);
+  }
+  #bigbang-flash.active{ animation: bigbangFlash 1.5s ease-out forwards; }
+  @keyframes bigbangFlash{
+    0%{ opacity:0; transform:scale(0.15); }
+    12%{ opacity:1; transform:scale(1); }
+    100%{ opacity:0; transform:scale(3.4); }
+  }
+</style>
+</head>
+<body class="gate-active">
+
+<div id="preloader">
+  <div id="preload-num">000%</div>
+  <div id="preload-line"><div id="preload-fill"></div></div>
+</div>
+
+<div id="entry-gate">
+  <div id="entry-dot"></div>
+  <div class="eyebrow">STELLAR ALIGNMENT</div>
+  <h1>จักรวาลทั้งใบกำลังรอ<br>การบรรจบกันครั้งนี้</h1>
+  <div class="enter-hint">[ แตะเพื่อจุดประกาย ]</div>
+</div>
+
+<div id="bigbang-flash"></div>
+
+<audio id="bg-audio" src="background-audio.mp3" loop preload="auto"></audio>
+<button id="sound-toggle" aria-label="เปิด/ปิดเสียง">
+  <svg viewBox="0 0 24 24"><path class="bar" id="sound-icon" d="M4 9v6h4l5 5V4L8 9H4z"/></svg>
+</button>
+
+<canvas id="stars-canvas"></canvas>
+
+<main>
+
+  <!-- SCENE 1 — Threshold -->
+  <section id="s0">
+    <div class="eyebrow fade-el">STELLAR ALIGNMENT</div>
+    <h1 class="fade-el">ความรักไม่ใช่เรื่อง<span class="gold">บังเอิญ</span></h1>
+    <p class="lede fade-el">มันคือวงโคจรของดวงดาวสองดวง ที่ค่อยๆ เคลื่อนเข้าหากัน<br>ท่ามกลางจักรวาลอันกว้างใหญ่ — จนบรรจบกันพอดี</p>
+    <div class="scroll-hint"><span></span>SCROLL</div>
+  </section>
+
+  <!-- SCENE 2 — first constellation forms: the meeting -->
+  <section id="s1" class="milestone">
+    <div class="scene-label fade-el">01 · จุดที่วงโคจรเริ่มเข้าใกล้</div>
+    <h2 class="fade-el">วันที่เราพบกันครั้งแรก</h2>
+    <div class="date fade-el">[ ใส่วันที่ / สถานที่ ที่พบกัน ]</div>
+    <p class="fade-el">ตอนนั้นเราไม่รู้หรอกว่าดวงดาวสองดวงกำลังเคลื่อนเข้าใกล้กัน<br>จนวันหนึ่ง มันก็กลายเป็นกลุ่มดาวที่มีชื่อ</p>
+  </section>
+
+  <!-- SCENE 3 — infinity formation -->
+  <section id="s2" class="milestone">
+    <div class="scene-label fade-el">02 · เส้นทางที่ไม่มีที่สิ้นสุด</div>
+    <h2 class="fade-el">ช่วงเวลาที่เรากลายเป็น "เรา"</h2>
+    <div class="date fade-el">[ ใส่ช่วงเวลาหรือเหตุการณ์สำคัญ ]</div>
+    <p class="fade-el">ไม่ว่าจะไกลแค่ไหน แรงโน้มถ่วงของเราก็ยังดึงดูดกันเสมอ<br>เหมือนวงโคจรที่หมุนวนไม่มีวันจบ</p>
+  </section>
+
+  <!-- SCENE 4 — star formation -->
+  <section id="s3" class="milestone">
+    <div class="scene-label fade-el">03 · แสงดาวที่สว่างที่สุด</div>
+    <h2 class="fade-el">สิ่งที่ทำให้ฉันมั่นใจว่าใช่เธอ</h2>
+    <div class="date fade-el">[ ใส่ความทรงจำหรือช่วงบ่ายเงียบๆ ที่ประทับใจ ]</div>
+    <p class="fade-el">ท่ามกลางดาวนับล้านดวงบนท้องฟ้า<br>มีเพียงดวงเดียวเท่านั้นที่ทำให้ฉันหยุดมองนาน</p>
+  </section>
+
+  <!-- SCENE 5 — final convergence -->
+  <section id="s4" class="final">
+    <div class="eyebrow fade-el">THE ALIGNMENT</div>
+    <h1 class="fade-el">ไม่ว่าจักรวาลจะกว้างใหญ่แค่ไหน<br>วงโคจรของฉันก็ยังวนกลับมาหา<span class="gold">เธอ</span> เสมอ</h1>
+    <p class="lede fade-el">[ ใส่ประโยคบอกรัก หรือข้อความส่วนตัวที่อยากบอกที่สุด ]</p>
+    <div class="signoff fade-el">— ด้วยรักจากดวงดาวของเธอ</div>
+    <div class="edit-note fade-el">*แก้ไขข้อความในวงเล็บทั้งหมดให้เป็นเรื่องราวของคุณ</div>
+  </section>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+
+  /* ---------------- Background audio ---------------- */
+  const audio = document.getElementById('bg-audio');
+  const soundToggle = document.getElementById('sound-toggle');
+  const soundIcon = document.getElementById('sound-icon');
+  audio.volume = 0.55;
+
+  const MUTED_PATH = "M16.5 12c0-1.77-1-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.8L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z";
+  const UNMUTED_PATH = "M4 9v6h4l5 5V4L8 9H4z";
+
+  soundToggle.addEventListener('click', ()=>{
+    if(audio.paused){
+      audio.play();
+      soundIcon.setAttribute('d', UNMUTED_PATH);
+    } else {
+      audio.pause();
+      soundIcon.setAttribute('d', MUTED_PATH);
+    }
+  });
+  audio.addEventListener('play', ()=> soundIcon.setAttribute('d', UNMUTED_PATH));
+  audio.addEventListener('pause', ()=> soundIcon.setAttribute('d', MUTED_PATH));
+
+  /* ---------------- Preloader ---------------- */
+  const fill = document.getElementById('preload-fill');
+  const num = document.getElementById('preload-num');
+  let pct = 0;
+  const preInterval = setInterval(()=>{
+    pct += Math.random()*14;
+    if(pct >= 100){ pct = 100; clearInterval(preInterval); }
+    fill.style.width = pct + '%';
+    num.textContent = String(Math.floor(pct)).padStart(3,'0') + '%';
+    if(pct === 100){
+      setTimeout(()=>{
+        document.getElementById('preloader').classList.add('hidden');
+        document.getElementById('entry-gate').classList.add('visible');
+      }, 350);
+    }
+  }, 110);
+
+  function revealHero(){
+    document.querySelectorAll('#s0 .fade-el').forEach((el,i)=>{
+      setTimeout(()=> el.classList.add('in'), i*220);
+    });
+  }
+
+  /* ---------------- Scroll reveal for other sections ---------------- */
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.querySelectorAll('.fade-el').forEach((el,i)=>{
+          setTimeout(()=> el.classList.add('in'), i*150);
+        });
+      }
+    });
+  }, { threshold: 0.35 });
+  document.querySelectorAll('section:not(#s0)').forEach(s => io.observe(s));
+
+  /* ---------------- Three.js starfield ---------------- */
+  const canvas = document.getElementById('stars-canvas');
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.z = 14;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x060911, 1);
+
+  // soft circular sprite texture, generated (no external image needed)
+  function makeDotTexture(){
+    const s = 64;
+    const c = document.createElement('canvas'); c.width = c.height = s;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.6)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,s,s);
+    return new THREE.CanvasTexture(c);
+  }
+  const dotTexture = makeDotTexture();
+
+  const COUNT = 650;
+
+  // ---------- Formation generators (each returns Float32Array of length COUNT*3) ----------
+  function scatterFormation(){
+    const arr = new Float32Array(COUNT*3);
+    for(let i=0;i<COUNT;i++){
+      const r = 9 + Math.random()*10;
+      const theta = Math.random()*Math.PI*2;
+      const phi = Math.acos((Math.random()*2)-1);
+      arr[i*3]   = r*Math.sin(phi)*Math.cos(theta);
+      arr[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+      arr[i*3+2] = r*Math.cos(phi) - 6;
+    }
+    return arr;
+  }
+
+  function heartFormation(){
+    const arr = new Float32Array(COUNT*3);
+    for(let i=0;i<COUNT;i++){
+      const t = Math.random()*Math.PI*2;
+      const scale = 0.34;
+      let x = 16*Math.pow(Math.sin(t),3);
+      let y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+      const jitter = (Math.random()-0.5)*0.9;
+      const depthJ = (Math.random()-0.5)*2.2;
+      arr[i*3]   = x*scale + jitter;
+      arr[i*3+1] = y*scale + jitter;
+      arr[i*3+2] = depthJ;
+    }
+    return arr;
+  }
+
+  function infinityFormation(){
+    const arr = new Float32Array(COUNT*3);
+    for(let i=0;i<COUNT;i++){
+      const t = Math.random()*Math.PI*2;
+      const a = 6.5;
+      const denom = 1 + Math.sin(t)*Math.sin(t);
+      let x = a*Math.cos(t)/denom;
+      let y = a*Math.sin(t)*Math.cos(t)/denom;
+      const jitter = (Math.random()-0.5)*0.8;
+      arr[i*3]   = x + jitter;
+      arr[i*3+1] = y + jitter;
+      arr[i*3+2] = (Math.random()-0.5)*2;
+    }
+    return arr;
+  }
+
+  function starFormation(){
+    const arr = new Float32Array(COUNT*3);
+    const spikes = 5;
+    const outerR = 7.2, innerR = 3.0;
+    for(let i=0;i<COUNT;i++){
+      const t = Math.random()*Math.PI*2;
+      const seg = (t/(Math.PI*2))*spikes*2;
+      const idx = Math.floor(seg);
+      const frac = seg - idx;
+      const r0 = (idx%2===0)? outerR : innerR;
+      const r1 = ((idx+1)%2===0)? outerR : innerR;
+      const r = r0 + (r1-r0)*frac;
+      let x = r*Math.cos(t - Math.PI/2);
+      let y = r*Math.sin(t - Math.PI/2);
+      const jitter = (Math.random()-0.5)*0.6;
+      arr[i*3]   = x + jitter;
+      arr[i*3+1] = y + jitter;
+      arr[i*3+2] = (Math.random()-0.5)*1.6;
+    }
+    return arr;
+  }
+
+  function convergeFormation(){
+    const arr = new Float32Array(COUNT*3);
+    for(let i=0;i<COUNT;i++){
+      const r = Math.random()*2.6;
+      const theta = Math.random()*Math.PI*2;
+      const phi = Math.acos((Math.random()*2)-1);
+      arr[i*3]   = r*Math.sin(phi)*Math.cos(theta);
+      arr[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+      arr[i*3+2] = r*Math.cos(phi);
+    }
+    return arr;
+  }
+
+  const formations = [ scatterFormation(), heartFormation(), infinityFormation(), starFormation(), convergeFormation() ];
+
+  const positions = new Float32Array(COUNT*3);
+  positions.set(formations[4]); // start fully converged — the seed before the big bang
+
+  const colors = new Float32Array(COUNT*3);
+  const goldC = new THREE.Color(0xd9b968);
+  const whiteC = new THREE.Color(0xece7da);
+  const blueC = new THREE.Color(0x8fa3d9);
+  for(let i=0;i<COUNT;i++){
+    const pick = Math.random();
+    const c = pick < 0.18 ? goldC : (pick < 0.4 ? blueC : whiteC);
+    colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const material = new THREE.PointsMaterial({
+    size: 0.16,
+    map: dotTexture,
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true
+  });
+
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  // faint distant background stars (static, non-morphing) for depth
+  const bgCount = 500;
+  const bgPos = new Float32Array(bgCount*3);
+  for(let i=0;i<bgCount;i++){
+    const r = 22 + Math.random()*30;
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.acos((Math.random()*2)-1);
+    bgPos[i*3]   = r*Math.sin(phi)*Math.cos(theta);
+    bgPos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+    bgPos[i*3+2] = r*Math.cos(phi) - 20;
+  }
+  const bgGeo = new THREE.BufferGeometry();
+  bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+  const bgMat = new THREE.PointsMaterial({ size:0.09, map: dotTexture, color:0xece7da, transparent:true, opacity:0.35, depthWrite:false, blending: THREE.AdditiveBlending });
+  const bgPoints = new THREE.Points(bgGeo, bgMat);
+  scene.add(bgPoints);
+
+  /* ---------------- Scroll + mouse driven state ---------------- */
+  let scrollProgress = 0;
+  let targetMouseX = 0, targetMouseY = 0;
+  let mouseX = 0, mouseY = 0;
+
+  function updateScrollProgress(){
+    const max = document.body.scrollHeight - window.innerHeight;
+    scrollProgress = max > 0 ? window.scrollY / max : 0;
+  }
+  window.addEventListener('scroll', updateScrollProgress, { passive:true });
+  updateScrollProgress();
+
+  window.addEventListener('mousemove', (e)=>{
+    targetMouseX = (e.clientX / window.innerWidth - 0.5);
+    targetMouseY = (e.clientY / window.innerHeight - 0.5);
+  });
+  window.addEventListener('touchmove', (e)=>{
+    if(e.touches && e.touches[0]){
+      targetMouseX = (e.touches[0].clientX / window.innerWidth - 0.5);
+      targetMouseY = (e.touches[0].clientY / window.innerHeight - 0.5);
+    }
+  }, { passive:true });
+
+  const tmpPos = new Float32Array(COUNT*3);
+
+  function easeInOut(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+
+  function updateFormationMorph(){
+    // 5 keyframes across scroll 0..1 -> kf in [0,4]
+    const kf = scrollProgress * (formations.length - 1);
+    let idx = Math.floor(kf);
+    if(idx >= formations.length - 1) idx = formations.length - 2;
+    let frac = kf - idx;
+    frac = easeInOut(Math.min(Math.max(frac,0),1));
+
+    const a = formations[idx];
+    const b = formations[idx+1];
+    const posAttr = geometry.attributes.position.array;
+    for(let i=0;i<COUNT*3;i++){
+      posAttr[i] = a[i] + (b[i]-a[i]) * frac;
+    }
+    geometry.attributes.position.needsUpdate = true;
+  }
+
+  /* ---------------- Big Bang entry sequence ---------------- */
+  let entered = false;
+  let explosionDone = false;
+
+  function runBigBang(){
+    const fromArr = formations[4]; // seed
+    const toArr = formations[0];   // full scatter
+    const duration = 1700;
+    let start = null;
+
+    function step(ts){
+      if(!start) start = ts;
+      const t = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const posAttr = geometry.attributes.position.array;
+      for(let i=0;i<COUNT*3;i++){
+        posAttr[i] = fromArr[i] + (toArr[i] - fromArr[i]) * eased;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      if(t < 1){
+        requestAnimationFrame(step);
+      } else {
+        explosionDone = true;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function enterSite(){
+    if(entered) return;
+    entered = true;
+
+    // audio: this click is a real user gesture, so play() is allowed
+    audio.play().then(()=>{
+      soundToggle.classList.add('visible');
+      soundIcon.setAttribute('d', UNMUTED_PATH);
+    }).catch(()=>{});
+
+    document.getElementById('bigbang-flash').classList.add('active');
+    runBigBang();
+
+    const gate = document.getElementById('entry-gate');
+    gate.classList.remove('visible');
+    gate.classList.add('hidden');
+
+    document.documentElement.classList.remove('gate-active');
+    document.body.classList.remove('gate-active');
+
+    setTimeout(revealHero, 1050);
+  }
+  document.getElementById('entry-gate').addEventListener('click', enterSite);
+  document.getElementById('entry-gate').addEventListener('touchend', (e)=>{ e.preventDefault(); enterSite(); });
+
+  function animate(){
+    requestAnimationFrame(animate);
+
+    mouseX += (targetMouseX - mouseX) * 0.04;
+    mouseY += (targetMouseY - mouseY) * 0.04;
+
+    if(explosionDone){
+      updateFormationMorph();
+    }
+
+    // camera parallax: gentle rotation + z-axis push based on scroll
+    camera.position.x = mouseX * 1.6;
+    camera.position.y = -mouseY * 1.6;
+    camera.position.z = 14 - scrollProgress * 6;
+    camera.lookAt(0,0,0);
+
+    points.rotation.y += 0.0009;
+    points.rotation.x = mouseY * 0.15;
+    bgPoints.rotation.y += 0.0002;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+})();
+</script>
+</body>
+</html>
